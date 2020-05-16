@@ -1,0 +1,166 @@
+# Loading packages required
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# Verfication functions
+def check_na(df):
+    round(df.isna().sum()*100/len(df),3)
+
+def data_summary(df):
+    for col in df:
+        print(col,"-----  ", 
+              df[col].nunique(),"-----  ",
+              df[col].unique())    
+
+def create_dummies(df, col_type):
+    df = pd.get_dummies(df, columns = col_type, dummy_na=False, drop_first=True) 
+    # Important to use drop_first=True as created dummies lead to high multicollinearity leading to Dummy Variable Trap
+    
+    return df
+
+def scaling_features(df, col_type):
+    for col in col_type:
+        df[col] = df[col]/df[col].max()
+    
+    return df
+
+# Function to impute NAs with mean value
+
+def na_impute_mean(df, col_type):
+    df[col_type] = df[col_type].fillna(df[col_type].mean())
+    
+    return df
+
+# To view feature-pairs with highest correlation
+
+def get_redundant_pairs(df):
+    '''Get diagonal and lower triangular pairs of correlation matrix'''
+    pairs_to_drop = set()
+    cols = df.columns
+    for i in range(0, df.shape[1]):
+        for j in range(0, i+1):
+            pairs_to_drop.add((cols[i], cols[j]))
+    return pairs_to_drop
+
+def get_top_abs_correlations(df, n=5):
+    corr_pairs = df.corr().abs().unstack()
+    labels_to_drop = get_redundant_pairs(df)
+    corr_pairs = corr_pairs.drop(labels=labels_to_drop).sort_values(ascending=False)
+    
+    return corr_pairs[0:n]
+
+# To delete highly correlated features
+
+def del_high_corr_features(df, threshold = 0.95):
+    corr_matrix = df.corr().abs()
+    upper_triangle = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool))
+    to_drop = [column for column in upper_triangle.columns if any(upper_triangle[column] > threshold)]
+    df.drop(df[to_drop], axis=1)
+    
+    return df
+
+def preprocessing_data(df):
+    
+    # creating dummies for nominal columns
+    df = create_dummies(df, nominal_cols)
+   
+    # replacing transformed ordinal_cols_cat into the dataframe
+    df.replace(ordinal_cols_cat_dict, inplace=True)
+
+    # imputing NA values with "mean"
+    
+    df = na_impute_mean(df, binary_cols)
+    df = na_impute_mean(df, ordinal_cols)
+    df = na_impute_mean(df, ordinal_cols_cat)    
+    
+    # rescaling columns
+    
+    scaling_features(df, ordinal_cols)
+    scaling_features(df, ordinal_cols_cat)
+    
+    return df
+
+
+# Data Preprocessing
+
+# Importing data files
+
+training_set_features = pd.read_csv("training_set_features.csv", index_col = "respondent_id")
+test_set_features = pd.read_csv("test_set_features.csv", index_col = "respondent_id")
+
+# Separating columns based on their type
+
+# Variables that do not need dummies as they are already binary
+
+binary_cols = [ "behavioral_antiviral_meds", 
+                "behavioral_avoidance", 
+                "behavioral_face_mask", 
+                "behavioral_wash_hands", 
+                "behavioral_large_gatherings", 
+                "behavioral_outside_home", 
+                "behavioral_touch_face", 
+                "doctor_recc_h1n1", 
+                "doctor_recc_seasonal", 
+                "chronic_med_condition", 
+                "child_under_6_months", 
+                "health_worker", 
+                "health_insurance"
+                ]
+
+# Nominal variables
+nominal_cols = ["race",
+                "sex",
+                "marital_status",
+                "rent_or_own",
+                "employment_status",
+                "education",
+                "hhs_geo_region",
+                "census_msa",
+                "household_adults",
+                "household_children",
+                "employment_industry",
+                "employment_occupation"
+                ]
+
+# Numeric ordinal variables
+ordinal_cols = ["h1n1_concern", 
+                "h1n1_knowledge", 
+                "opinion_h1n1_vacc_effective",
+                "opinion_h1n1_risk", 
+                "opinion_h1n1_sick_from_vacc",
+                "opinion_seas_vacc_effective",
+                "opinion_seas_risk", 
+                "opinion_seas_sick_from_vacc"
+                ]
+
+# Categorical ordinal variables
+ordinal_cols_cat_dict = {"age_group":{"18 - 34 Years": (18+34)/2, "35 - 44 Years": (35+44)/2, 
+                                 "45 - 54 Years": (45+54)/2,"55 - 64 Years": (45+54)/2,
+                                 "65+ Years": 65},              
+                
+                         "income_poverty": {"Below Poverty": 22025, 
+                                            "<= $75,000, Above Poverty": (22025+75000)/2, 
+                                            "> $75,000": 75000}
+                   }
+ordinal_cols_cat = ["age_group", "income_poverty"]
+
+
+train_df = preprocessing_data(training_set_features)
+test_df = preprocessing_data(test_set_features)
+
+print("Top Absolute Correlations")
+print(get_top_abs_correlations(train_df, 10))
+
+train_df = del_high_corr_features(train_df, 0.95)
+test_df = del_high_corr_features(test_df, 0.95)
+
+
+# Verification
+
+check_na(train_df)
+data_summary(train_df)   # gives the variable name -- total unique values ---- list of unique values
+
+train_df.head()
+test_df.head()
