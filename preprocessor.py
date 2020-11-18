@@ -12,9 +12,6 @@ from sklearn.impute import SimpleImputer
 class Preprocessor:
     def __init__(self):
         pass
-#         self.df = None
-#         self.col_type = None
-#         self.threshold = None  
     
     def data_prep_check(self, df):
         null_val = df.isnull().sum()
