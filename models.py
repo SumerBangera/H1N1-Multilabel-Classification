@@ -7,7 +7,7 @@ import pickle
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, GradientBoostingClassifier, AdaBoostClassifier
+from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier, GradientBoostingClassifier
 from xgboost.sklearn import XGBClassifier
 from lightgbm import LGBMClassifier
 from catboost import CatBoostClassifier
@@ -191,14 +191,3 @@ class Models():
                     data=df2.sort_values(by="Importance", ascending=False)[:n], palette='flare_r')
 
         plt.tight_layout()       
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
